@@ -1,0 +1,11 @@
+services:
+  db:
+    image: mongodb/mongodb-community-server
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=nvd
+      - MONGO_INITDB_ROOT_PASSWORD=nvd
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
