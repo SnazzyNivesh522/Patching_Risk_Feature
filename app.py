@@ -12,12 +12,12 @@ app = Flask(__name__)
 
 
 @app.route("/cve/<string:cve_id>", methods=["GET"])
-def get_cve_details(cve_id: str):
+async def get_cve_details(cve_id: str):
     try:
         year, num = cve_id.split("-")[1:]
         num = int(num)
         cve_file = f"{Config.CVE_DIR}/{year}/{int(num / 1000)}xxx/{cve_id}.json"
-        cve_details = read_cve_json_file(cve_file)
+        cve_details = await read_cve_json_file(cve_file)
         return jsonify(cve_details)
     except ValueError:
         return jsonify({"error": "Invalid CVE ID format."}), 400
