@@ -17,3 +17,4 @@ class Config:
     )
     METASPLOIT_JSON = "https://raw.githubusercontent.com/rapid7/metasploit-framework/master/db/modules_metadata_base.json"
     GITHUB_POC = "https://poc-in-github.motikan2010.net/api/v1/?cve_id="
+    EPSS_URL="https://api.first.org/data/v1/epss?cve="
