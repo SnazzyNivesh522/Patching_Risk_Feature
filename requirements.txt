@@ -2,3 +2,4 @@ httpx
 motor
 python-dotenv
 flask[async]
+flask-cors
