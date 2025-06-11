@@ -1,9 +1,15 @@
 from flask import Flask, jsonify
 from config import Config
-from helpers import read_cve_json_file,extract_priority
+from helpers import (
+    read_cve_json_file,
+    extract_priority,
+    calculate_priority,
+    calculate_epss,
+)
 from database import get_session
-import requests
+
 app = Flask(__name__)
+
 
 @app.route("/cve/<string:cve_id>", methods=["GET"])
 def get_cve_details(cve_id: str):
@@ -20,8 +26,16 @@ def get_cve_details(cve_id: str):
 
 
 @app.route("/cve/<string:cve_id>/priority", methods=["GET"])
-def get_cve_priority(cve_id: str):
+async def get_cve_priority(cve_id: str):
     client = get_session()
     db = client[Config.MONGO_DB_NAME]
-    return jsonify(extract_priority(cve_id,db))
-
+    public_info = await extract_priority(cve_id, db)
+    epss = await calculate_epss(cve_id, public_info)
+    priority = await calculate_priority(cve_id, epss, public_info)
+    priority_details = {
+        "cve_id": cve_id,
+        **public_info,
+        "epss": epss,
+        "priority": priority,
+    }
+    return jsonify(priority_details)
