@@ -1,4 +1,4 @@
 httpx
 motor
 python-dotenv
-flask
+flask[async]
