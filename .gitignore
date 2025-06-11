@@ -1,3 +1,4 @@
 cve_data/
 __pycache__/
 .venv/
+*.zip
