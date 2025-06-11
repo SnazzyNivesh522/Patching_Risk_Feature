@@ -7,7 +7,7 @@ load_dotenv()
 class Config:
     MONGO_USER = os.getenv("MONGO_INITDB_ROOT_USERNAME")
     MONGO_PASS = os.getenv("MONGO_INITDB_ROOT_PASSWORD")
-    MONGO_CONN_STR = f"mongodb://{MONGO_USER}:{MONGO_PASS}@172.19.0.2:27017/"
+    MONGO_CONN_STR = f"mongodb://{MONGO_USER}:{MONGO_PASS}@172.26.0.2:27017/"
     MONGO_DB_NAME = "cve_metadata"
     KEV_JSON = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
     NUCLEI_JSON = "https://raw.githubusercontent.com/projectdiscovery/nuclei-templates/main/cves.json"
