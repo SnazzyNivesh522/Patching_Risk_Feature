@@ -18,8 +18,3 @@ if __name__ == "__main__":
     # extract_nested_zip(zip_filename, extract_to_dir="cve_data")
     # total_time = time.time() - start_time
     # print(f"Total Time Taken to extract CVE list: {total_time:.0f} seconds")
-
-    # start_time = time.time()
-    # asyncio.run(get_result(start_index=68*2000))
-    # total_time = time.time() - start_time
-    # print(f"Total Time Taken:{total_time/60} minutes")
