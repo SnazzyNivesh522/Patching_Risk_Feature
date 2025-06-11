@@ -20,7 +20,7 @@ async def update_in_db(documents: list, collection_name: str):
         await collection.update_one({"cveID": cve_id}, {"$set": doc}, upsert=True)
 
 
-async def load_all_df():
+async def load_all_metadata():
     response = requests.get(Config.KEV_JSON)
     kev_json = response.json().get("vulnerabilities")
 
@@ -34,9 +34,12 @@ async def load_all_df():
     exploitdb_json = []
     for value in exploitdb_csv[1:]:
         exploit = dict(zip(exploitdb_csv[0], value))
-        
-        exploit["cveID"] = exploit.pop("codes").split(";")[0].strip()
-        
+
+        exploit["cveID"] = exploit["codes"]
+        for code in exploit["cveID"].split(";"):
+            if code.startswith("CVE"):
+                exploit["cveID"] = code
+
         exploitdb_json.append(exploit)
     print("exploits in exploit db:", len(exploitdb_json))
     await update_in_db(exploitdb_json, "exploitdb")
@@ -56,7 +59,6 @@ async def load_all_df():
             metasploit__cve.append(current_ms)
     print("final metasploits are :", len(metasploit__cve))
     await update_in_db(metasploit__cve, "metasploit")
-    
 
     response = requests.get(Config.NUCLEI_JSON)
     nuclei_cve = []
