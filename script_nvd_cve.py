@@ -13,10 +13,6 @@ from config import Config
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 logging.basicConfig(filename="nvd_data.log", level=logging.INFO, format=LOG_FORMAT)
 
-# MongoDB configuration
-MONGO_URI = "mongodb://localhost:27017"
-DB_NAME = "nvd"
-COLLECTION_NAME = "cve_data"
 
 # Download NVD CVE feed
 async def download_nvd_data(year: int, output_dir: str) -> str | None:
@@ -51,32 +47,29 @@ async def download_nvd_data(year: int, output_dir: str) -> str | None:
         logging.error(f"Failed to process year {year}: {e}")
         return None
 
+
 def extract_metrics(cve: dict) -> tuple:
     try:
-        metrics = cve["metrics"] if isinstance(cve, dict) and "metrics" in cve else []
-        for metric in metrics:
-            cvss = None
-            if isinstance(metric, dict):
-                cvss = metric.get("cvssMetricV40") or metric.get("cvssMetricV31") or metric.get("cvssMetricV40") or metric.get("cvssMetricV2")
-            if cvss and isinstance(cvss, dict):
-                return (
-                    cvss["baseScore"] if "baseScore" in cvss else "N/A",
-                    cvss["baseSeverity"] if "baseSeverity" in cvss else "N/A",
-                    cvss["vectorString"] if "vectorString" in cvss else "N/A",
-                    cvss["version"] if "version" in cvss else "N/A",
-                )
+        return cve["metrics"] if isinstance(cve, dict) and "metrics" in cve else {}
+        
     except (TypeError, KeyError) as e:
         logging.debug(f"Error in extract_metrics: {e}")
-    return ("N/A", "N/A", "N/A", "N/A")
+    return {}
+
 
 def extract_description(cve: dict) -> str:
     try:
         if not isinstance(cve, dict) or "descriptions" not in cve:
             return ""
-        return "\n".join(d["value"] for d in cve["descriptions"] if isinstance(d, dict) and "value" in d).strip()
+        return "\n".join(
+            d["value"]
+            for d in cve["descriptions"]
+            if isinstance(d, dict) and "value" in d
+        ).strip()
     except (TypeError, KeyError) as e:
         logging.debug(f"Error in extract_description: {e}")
         return ""
+
 
 def extract_weaknesses(cve: dict) -> list:
     try:
@@ -92,6 +85,7 @@ def extract_weaknesses(cve: dict) -> list:
         logging.debug(f"Error in extract_weaknesses: {e}")
         return []
 
+
 def extract_packages(cve: dict) -> list:
     try:
         if not isinstance(cve, dict) or "configurations" not in cve:
@@ -99,7 +93,9 @@ def extract_packages(cve: dict) -> list:
         cfg = cve["configurations"]
         if not cfg or not isinstance(cfg, list) or not cfg[0]:
             return []
-        nodes = cfg[0]["nodes"] if isinstance(cfg[0], dict) and "nodes" in cfg[0] else []
+        nodes = (
+            cfg[0]["nodes"] if isinstance(cfg[0], dict) and "nodes" in cfg[0] else []
+        )
         if not nodes or not isinstance(nodes, list) or not nodes[0]:
             return []
         return [
@@ -111,9 +107,10 @@ def extract_packages(cve: dict) -> list:
         logging.debug(f"Error in extract_packages: {e}")
         return []
 
+
 async def parse_and_store(json_path: str, collection) -> None:
     try:
-        with open(json_path, "r", encoding="utf-8",errors='ignore') as f:
+        with open(json_path, "r", encoding="utf-8", errors="ignore") as f:
             data = json.load(f)
         if not isinstance(data, dict) or "vulnerabilities" not in data:
             logging.error(f"Invalid JSON structure in {json_path}")
@@ -126,17 +123,12 @@ async def parse_and_store(json_path: str, collection) -> None:
                 logging.debug(f"Skipping invalid CVE entry in {json_path}")
                 continue
             c = item["cve"]
-            base, severity, vector, version = extract_metrics(c)
+            metrics = extract_metrics(c)
 
             doc = {
                 "cve_id": c["id"] if isinstance(c, dict) and "id" in c else "N/A",
                 "description": extract_description(c),
-                "cvss": {
-                    "version": version,
-                    "baseScore": base,
-                    "severity": severity,
-                    "vectorString": vector,
-                },
+                "cvss": metrics,
                 "weaknesses": extract_weaknesses(c),
                 "packages": extract_packages(c),
             }
@@ -152,6 +144,7 @@ async def parse_and_store(json_path: str, collection) -> None:
 
     except Exception as e:
         logging.error(f"Error parsing {json_path}: {e}")
+
 
 async def main():
     start = time.time()
@@ -171,6 +164,7 @@ async def main():
 
     logging.info(f"All data inserted in {time.time() - start:.2f}s")
     client.close()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
