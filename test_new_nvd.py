@@ -52,53 +52,84 @@ async def download_nvd_data(year: int, output_dir: str) -> str | None:
         return None
 
 def extract_metrics(cve: dict) -> tuple:
-    for metric in cve["metrics"]:  # Line 59: Replaced .get("metrics", []) with ["metrics"]
-        cvss = metric["cvssV4_0"] or metric["cvssV3_1"] or metric["cvssV3"]  # Replaced .get() with []
-        if cvss:
-            return (
-                cvss["baseScore"],  # Replaced .get("baseScore", "N/A") with ["baseScore"]
-                cvss["baseSeverity"],  # Replaced .get("baseSeverity", "N/A") with ["baseSeverity"]
-                cvss["vectorString"],  # Replaced .get("vectorString", "N/A") with ["vectorString"]
-                cvss["version"],  # Replaced .get("version", "N/A") with ["version"]
-            )
+    try:
+        metrics = cve["metrics"] if isinstance(cve, dict) and "metrics" in cve else []
+        for metric in metrics:
+            cvss = None
+            if isinstance(metric, dict):
+                cvss = metric.get("cvssMetricV40") or metric.get("cvssMetricV31") or metric.get("cvssMetricV40") or metric.get("cvssMetricV2")
+            if cvss and isinstance(cvss, dict):
+                return (
+                    cvss["baseScore"] if "baseScore" in cvss else "N/A",
+                    cvss["baseSeverity"] if "baseSeverity" in cvss else "N/A",
+                    cvss["vectorString"] if "vectorString" in cvss else "N/A",
+                    cvss["version"] if "version" in cvss else "N/A",
+                )
+    except (TypeError, KeyError) as e:
+        logging.debug(f"Error in extract_metrics: {e}")
     return ("N/A", "N/A", "N/A", "N/A")
 
 def extract_description(cve: dict) -> str:
-    return "\n".join(d["value"] for d in cve["descriptions"]).strip()  # Replaced .get() with []
+    try:
+        if not isinstance(cve, dict) or "descriptions" not in cve:
+            return ""
+        return "\n".join(d["value"] for d in cve["descriptions"] if isinstance(d, dict) and "value" in d).strip()
+    except (TypeError, KeyError) as e:
+        logging.debug(f"Error in extract_description: {e}")
+        return ""
 
 def extract_weaknesses(cve: dict) -> list:
-    return [
-        desc["value"]
-        for weak in cve["weaknesses"]  # Replaced .get("weaknesses", []) with ["weaknesses"]
-        for desc in weak["description"]  # Replaced .get("description", []) with ["description"]
-        if "value" in desc
-    ]
+    try:
+        if not isinstance(cve, dict) or "weaknesses" not in cve:
+            return []
+        return [
+            desc["value"]
+            for weak in cve["weaknesses"]
+            for desc in weak["description"]
+            if isinstance(weak, dict) and isinstance(desc, dict) and "value" in desc
+        ]
+    except (TypeError, KeyError) as e:
+        logging.debug(f"Error in extract_weaknesses: {e}")
+        return []
 
 def extract_packages(cve: dict) -> list:
-    cfg = cve["configurations"]  # Line 83: Replaced .get("configurations", []) with ["configurations"]
-    if cfg:
-        nodes = cfg[0]["nodes"]  # Replaced .get("nodes", []) with ["nodes"]
-        if nodes:
-            return [
-                cpe["criteria"] for cpe in nodes[0]["cpeMatch"]  # Replaced .get("criteria", "cpe:*") and .get("cpeMatch", []) with []
-            ]
-    return []
+    try:
+        if not isinstance(cve, dict) or "configurations" not in cve:
+            return []
+        cfg = cve["configurations"]
+        if not cfg or not isinstance(cfg, list) or not cfg[0]:
+            return []
+        nodes = cfg[0]["nodes"] if isinstance(cfg[0], dict) and "nodes" in cfg[0] else []
+        if not nodes or not isinstance(nodes, list) or not nodes[0]:
+            return []
+        return [
+            cpe["criteria"]
+            for cpe in nodes[0]["cpeMatch"]
+            if isinstance(cpe, dict) and "criteria" in cpe
+        ]
+    except (TypeError, KeyError) as e:
+        logging.debug(f"Error in extract_packages: {e}")
+        return []
 
 async def parse_and_store(json_path: str, collection) -> None:
     try:
-        with open(json_path, "r", encoding="utf-8") as f:
+        with open(json_path, "r", encoding="utf-8",errors='ignore') as f:
             data = json.load(f)
-        print(type(data))
-        print()
+        if not isinstance(data, dict) or "vulnerabilities" not in data:
+            logging.error(f"Invalid JSON structure in {json_path}")
+            return
         vulnerabilities = data["vulnerabilities"]
         docs = []
 
         for item in vulnerabilities:
-            c = item["cve"]  # Line 104: Replaced .get("cve", {}) with ["cve"]
+            if not isinstance(item, dict) or "cve" not in item:
+                logging.debug(f"Skipping invalid CVE entry in {json_path}")
+                continue
+            c = item["cve"]
             base, severity, vector, version = extract_metrics(c)
 
             doc = {
-                "cve_id": c["id"],  # Line 108: Replaced .get("id", "N/A") with ["id"]
+                "cve_id": c["id"] if isinstance(c, dict) and "id" in c else "N/A",
                 "description": extract_description(c),
                 "cvss": {
                     "version": version,
