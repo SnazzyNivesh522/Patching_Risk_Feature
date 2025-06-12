@@ -5,7 +5,7 @@ load_dotenv()
 
 
 class Config:
-    CVE_DIR="cve_data/cves"
+    CVE_DIR="nvd_data/cves"
     MONGO_USER = os.getenv("MONGO_INITDB_ROOT_USERNAME")
     MONGO_PASS = os.getenv("MONGO_INITDB_ROOT_PASSWORD")
     MONGO_CONN_STR = f"mongodb://{MONGO_USER}:{MONGO_PASS}@172.26.0.2:27017/"

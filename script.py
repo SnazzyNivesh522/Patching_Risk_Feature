@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, timezone
 import io
 import os
 import httpx
-import asyncio
 from config import Config
 from database import get_session
 import csv

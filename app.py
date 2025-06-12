@@ -16,7 +16,7 @@ CORS(
     app,
     resources={
         r"/cves*": {
-            "origins": ["*"],  # allow only your frontend
+            "origins": ["*"], 
             "methods": ["GET", "POST", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
             "supports_credentials": True,
