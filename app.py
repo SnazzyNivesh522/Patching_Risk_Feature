@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from config import Config
 from helpers import (
-    read_cve_json_file,
+    extract_cve_details,
     extract_priority,
     calculate_priority,
     calculate_epss,
@@ -16,7 +16,7 @@ CORS(
     app,
     resources={
         r"/cves*": {
-            "origins": ["*"], 
+            "origins": ["*"],
             "methods": ["GET", "POST", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
             "supports_credentials": True,
@@ -28,11 +28,16 @@ CORS(
 @app.route("/cve/<string:cve_id>", methods=["GET"])
 async def get_cve_details(cve_id: str):
     try:
-        year, num = cve_id.split("-")[1:]
-        num = int(num)
-        cve_file = f"{Config.CVE_DIR}/{year}/{int(num / 1000)}xxx/{cve_id}.json"
-        cve_details = await read_cve_json_file(cve_file)
-        return jsonify(cve_details)
+        client = get_session()
+        db = client[Config.MONGO_DB_NAME]
+        collection = db["cves"]
+        if not cve_id.startswith("CVE-"):
+            return jsonify({"error": "Invalid CVE ID format."}), 400
+        result = await collection.find_one({"cve_id": cve_id})
+        if not result:
+            return jsonify({"error": "CVE ID not found."}), 404
+
+        return jsonify(extract_cve_details(result))
     except ValueError:
         return jsonify({"error": "Invalid CVE ID format."}), 400
     except Exception as e:
