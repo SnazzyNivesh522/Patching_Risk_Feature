@@ -51,7 +51,6 @@ async def download_nvd_data(year: int, output_dir: str) -> str | None:
 def extract_metrics(cve: dict) -> tuple:
     try:
         return cve["metrics"] if isinstance(cve, dict) and "metrics" in cve else {}
-        
     except (TypeError, KeyError) as e:
         logging.debug(f"Error in extract_metrics: {e}")
     return {}
