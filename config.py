@@ -8,7 +8,8 @@ class Config:
     CVE_DIR="nvd_data/cves"
     MONGO_USER = os.getenv("MONGO_INITDB_ROOT_USERNAME")
     MONGO_PASS = os.getenv("MONGO_INITDB_ROOT_PASSWORD")
-    MONGO_CONN_STR = f"mongodb://{MONGO_USER}:{MONGO_PASS}@172.26.0.2:27017/"
+    MONGO_DB_IP= os.getenv("MONGO_DB_IP")
+    MONGO_CONN_STR = f"mongodb://{MONGO_USER}:{MONGO_PASS}@{MONGO_DB_IP}:27017/"
     MONGO_DB_NAME = "cve_metadata"
     KEV_JSON = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
     NUCLEI_JSON = "https://raw.githubusercontent.com/projectdiscovery/nuclei-templates/main/cves.json"
