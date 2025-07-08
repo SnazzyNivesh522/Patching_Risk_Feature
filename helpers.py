@@ -14,71 +14,41 @@ async def extract_description(cve_data: dict) -> str:
     return "\n".join(desc.get("value", "") for desc in descriptions)
 
 
-def extract_metrics(cve_data: dict) -> list:
-    metrics = ["N/A", "N/A", "N/A", "N/A"]
-    if (
-        cve_data is None
-        or "containers" not in cve_data
-        or "cna" not in cve_data["containers"]
-    ):
-        return metrics
-
-    cna = cve_data["containers"]["cna"]
-    metrics_json = cna.get("metrics", [])
-
-    for metric in metrics_json:
-        cvss_data = (
-            metric.get("cvssV4_0")
-            or metric.get("cvssV3_1")
-            or metric.get("cvssV3_0")
-            or metric.get("cvssV3")
-        )
-        if cvss_data and cvss_data.get("baseScore"):
-            return [
-                cvss_data.get("baseScore", "N/A"),
-                cvss_data.get("baseSeverity", "N/A"),
-                cvss_data.get("vectorString", "N/A"),
-                cvss_data.get("version", "N/A"),
-            ]
-
-    for adp_entry in cve_data["containers"].get("adp", []):
-        for metric in adp_entry.get("metrics", []):
-            cvss_data = (
-                metric.get("cvssV4_0")
-                or metric.get("cvssV3_1")
-                or metric.get("cvssV3_0")
-                or metric.get("cvssV3")
-            )
-            if cvss_data and cvss_data.get("baseScore"):
-                return [
-                    cvss_data.get("baseScore", "N/A"),
-                    cvss_data.get("baseSeverity", "N/A"),
-                    cvss_data.get("vectorString", "N/A"),
-                    cvss_data.get("version", "N/A"),
-                ]
-    return metrics
-
-
-async def read_cve_json_file(filename: str):
-    try:
-        with open(filename, "r") as file:
-            cve_data = json.load(file)
-            base_score, base_severity, vector, version = extract_metrics(cve_data)
-            description = await extract_description(cve_data)
-            return {
-                "vulnerability.id": cve_data.get("cveMetadata", {}).get("cveId"),
-                "vulnerability.description": description,
-                "vulnerability.score.version": version,
-                "vulnerability.score.base": base_score,
-                "vulnerability.severity": base_severity,
-                "vulnerability.cvss.vector": vector,
-            }
-    except FileNotFoundError:
-        return {"error": "CVE file not found."}
-    except json.JSONDecodeError:
-        return {"error": "Invalid JSON format."}
-    except Exception as e:
-        return {"error": str(e)}
+def extract_cve_details(cve_data: dict) -> dict:
+    metrics = cve_data.get("cvss", {})
+    version = ""
+    base_score = 0.0
+    base_severity = ""
+    vector = ""
+    versions = [
+        "cvssMetricV40",
+        "cvssMetricV31",
+        "cvssMetricV30",
+        "cvssMetricV3",
+    ]
+    
+    if "cvssMetricV2" in metrics.keys():
+        version = metrics["cvssMetricV2"][0]["cvssData"].get("version", "")
+        base_score = metrics["cvssMetricV2"][0]["cvssData"].get("baseScore", 0)
+        vector = metrics["cvssMetricV2"][0]["cvssData"].get("vectorString", "")
+        base_severity = metrics["cvssMetricV2"][0]["baseSeverity"]
+    for v in versions:
+        if v in metrics.keys():
+            version = metrics[v][0]["cvssData"].get("version", "")
+            base_score = metrics[v][0]["cvssData"].get("baseScore", 0)
+            base_severity = metrics[v][0]["cvssData"].get("baseSeverity", "")
+            vector = metrics[v][0]["cvssData"].get("vectorString", "")
+            break
+    return {
+        "vulnerability.id": cve_data.get("cve_id"),
+        "vulnerability.description": cve_data.get("description", ""),
+        "vulnerability.weaknesses": cve_data.get("weaknesses", []),
+        "vulnerability.packages": cve_data.get("packages", []),
+        "vulnerability.score.version": version,
+        "vulnerability.score.base": base_score,
+        "vulnerability.severity": base_severity,
+        "vulnerability.cvss.vector": vector,
+    }
 
 
 async def extract_priority(cve_id: str, db):
