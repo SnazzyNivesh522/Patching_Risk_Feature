@@ -93,10 +93,10 @@ async def download_cve_list():
             with open(filename, "wb") as file:
                 file.write(response.content)
 
-        print(f"\n✅ Success! File downloaded and saved to: {os.path.abspath(filename)}")
+        print(f"\nSuccess! File downloaded and saved to: {os.path.abspath(filename)}")
         return filename
     except Exception as e:
-        print(f"\n❌ An unexpected error occurred: {e}")
+        print(f"\nAn unexpected error occurred: {e}")
 
 
 def extract_nested_zip(outer_zip_path, extract_to_dir="cve_data"):
